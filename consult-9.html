@@ -1459,20 +1459,27 @@ function autoFillFromParams(){
 // Firebase 로드
 function boot(){
   $('loadingOverlay').classList.add('show');
-  onValue(ref(db,'/'),snap=>{
-    const raw=snap.val()||{};
-    allDevices=Object.entries(raw.devices||{}).map(normDevice).filter(d=>d.visible===true);
-    allPlans=Object.entries(raw.plans||{}).map(([id,v])=>({id,...v})).filter(p=>p.visible!==false)
-      .sort((a,b)=>Number(a.monthlyPrice||0)-Number(b.monthlyPrice||0));
-    allPolicies=Object.entries(raw.policy2||{}).map(([k,v])=>({_key:k,...v}));
+  let _devLoaded=false,_planLoaded=false,_polLoaded=false;
+  function tryBoot(){
+    if(!_devLoaded||!_planLoaded||!_polLoaded)return;
     $('loadingOverlay').classList.remove('show');
     buildTimeSlots();
     applyParams();
     autoFillFromParams();
-  },e=>{
-    $('loadingOverlay').classList.remove('show');
-    console.error(e);
-  });
+  }
+  onValue(ref(db,'devices'),snap=>{
+    allDevices=Object.entries(snap.val()||{}).map(normDevice).filter(d=>d.visible===true);
+    _devLoaded=true; tryBoot();
+  },e=>{ _devLoaded=true; $('loadingOverlay').classList.remove('show'); console.error(e); });
+  onValue(ref(db,'plans'),snap=>{
+    allPlans=Object.entries(snap.val()||{}).map(([id,v])=>({id,...v})).filter(p=>p.visible!==false)
+      .sort((a,b)=>Number(a.monthlyPrice||0)-Number(b.monthlyPrice||0));
+    _planLoaded=true; tryBoot();
+  },e=>{ _planLoaded=true; tryBoot(); console.error(e); });
+  onValue(ref(db,'policy2'),snap=>{
+    allPolicies=Object.entries(snap.val()||{}).map(([k,v])=>({_key:k,...v}));
+    _polLoaded=true; tryBoot();
+  },e=>{ _polLoaded=true; tryBoot(); console.error(e); });
 }
 boot();
 </script>
