@@ -826,7 +826,7 @@ input,select,textarea{font-family:inherit;outline:none;}
   <div class="pc-detail-panel" id="pcDetailPanel">
     <div class="detail-header">
       <h3>고객 상세 정보</h3>
-      <button class="btn btn-ghost btn-sm" onclick="closeDetail()">✕</button>
+      <button class="btn btn-ghost btn-sm" onclick="closePcDetail()">✕</button>
     </div>
     <div class="detail-body" id="pcDetailBody"></div>
     <div class="detail-footer">
@@ -1222,14 +1222,16 @@ function renderUrgBar(){
 // ── 목록 필터 ──
 function getList(){
   const q=$('searchInp').value.toLowerCase();
+  const myName=localStorage.getItem('crm_staff')||'';
+  const myStore=localStorage.getItem('crm_store')||'';
   let list;
   switch(curTab){
     case'urgent': list=ALL.filter(c=>!['개통완료','실패'].includes(c.status)&&elapsed(c.createdAt)>=600000); break;
     case'new':    list=ALL.filter(c=>['신규','연락중'].includes(c.status)||(!c.status)); break;
     case'recare': list=ALL.filter(c=>c.status==='재케어'); break;
     case'absence':list=ALL.filter(c=>c.status==='부재케어'); break;
-    case'mine':   list=ALL.filter(c=>c.assignedTo==='박대리'); break;
-    case'store':  list=ALL.filter(c=>c.assignedStore==='남양시장점'); break;
+    case'mine':   list=myName?ALL.filter(c=>c.assignedTo===myName):ALL; break;
+    case'store':  list=myStore?ALL.filter(c=>c.assignedStore===myStore):ALL; break;
     default:      list=ALL;
   }
   if(q)list=list.filter(c=>`${c.name||''}${c.phone||''}`.toLowerCase().includes(q));
@@ -1625,8 +1627,8 @@ window.selectConsult=selectConsult;
 window.toggleAccordion=id=>{$$(id)?.classList.toggle('open');};
 function $$(id){return document.getElementById(id);}
 
-function closeDetail(){$('pcDetailPanel').classList.remove('open');}
-window.closeDetail=closeDetail;
+function closePcDetail(){$('pcDetailPanel').classList.remove('open');}
+window.closePcDetail=closePcDetail;
 
 // ── PC 네비 ──
 function pcNav(page){
@@ -1703,7 +1705,7 @@ function pcSelectConsult(id){
   `;
 }
 window.selectConsult=pcSelectConsult;
-window.closeDetail=function(){document.getElementById('pcDetailPanel')?.classList.remove('open');};
+window.closePcDetail=function(){document.getElementById('pcDetailPanel')?.classList.remove('open');};
 window.toggleAllCheck=el=>{document.querySelectorAll('.row-chk').forEach(c=>c.checked=el.checked);};
 window.openPcStatusSheet=function(){selId=selId;openBS('st');};
 window.openPcAssignSheet=function(){openBS('assign');};
@@ -2101,8 +2103,6 @@ window.downloadCSV=function(){
   a.download=`VIVID_CRM_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
 };
-let dbPage=1;const DB_PER_PAGE=20;
-window.dbGoPage=p=>{dbPage=p;renderDbTable();};
 window.resetFilters=function(){
   const s=document.getElementById('dbSearch');
   const fp=document.getElementById('f-period');
@@ -2113,7 +2113,34 @@ window.resetFilters=function(){
   renderDbTable();
 };
 
-window.openLocSheet=function(){};
+window.openLocSheet=function(){
+  const stores=['남양시장점','중곡점','구미사점'];
+  const staffMap={'남양시장점':['여인국'],'중곡점':['황제필'],'구미사점':['강용민']};
+  const curStore=localStorage.getItem('crm_store')||'';
+  const storeChoice=prompt(`매장을 선택하세요 (현재: ${curStore||'미설정'})\n1. 남양시장점\n2. 중곡점\n3. 구미사점`);
+  if(!storeChoice)return;
+  const storeIdx=parseInt(storeChoice)-1;
+  if(storeIdx<0||storeIdx>=stores.length)return;
+  const store=stores[storeIdx];
+  const staffList=staffMap[store];
+  let staff=staffList[0];
+  if(staffList.length>1){
+    const sc=prompt(`담당자를 선택하세요:\n${staffList.map((s,i)=>`${i+1}. ${s}`).join('\n')}`);
+    if(!sc)return;
+    staff=staffList[parseInt(sc)-1]||sc;
+  }
+  localStorage.setItem('crm_store',store);
+  localStorage.setItem('crm_staff',staff);
+  const el=$('hdrLoc');
+  if(el)el.textContent=`${store} · ${staff}`;
+  renderList();
+};
+(function(){
+  const s=localStorage.getItem('crm_store');
+  const n=localStorage.getItem('crm_staff');
+  const el=document.getElementById('hdrLoc');
+  if(el&&s&&n)el.textContent=`${s} · ${n}`;
+})();
 window.openMenuBS=function(){
   if(confirm('로그아웃 하시겠습니까?'))location.reload();
 };
