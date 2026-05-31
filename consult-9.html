@@ -568,7 +568,7 @@ body{
       </div>
       <div class="select-arrow">›</div>
     </div>
-    <div onclick="openPopup('color')" class="select-row locked" id="row-color">
+    <div onclick="openPopup('storage')" class="select-row locked" id="row-color">
       <div class="select-row-left">
         <div class="select-label">색상</div>
         <div class="select-value placeholder" id="val-color">먼저 용량을 선택해주세요</div>
@@ -936,12 +936,15 @@ function normDevice([id,v]){
 
 // 팝업 열기
 window.openPopup=function(type){
-  if($(`row-${type}`).classList.contains('locked'))return;
+  if($(`row-${type}`)?.classList.contains('locked'))return;
+  // color는 별도 팝업 없이 storage 팝업에서 통합 처리
+  if(type==='color'){ type='storage'; }
   if(type==='device') renderDeviceList();
   else if(type==='storage') renderStorageList();
   else if(type==='plan') renderPlanList();
   else if(type==='discount') renderDiscountList();
-  $(`popup-${type}`).classList.add('open');
+  const popup=$(`popup-${type}`);
+  if(popup) popup.classList.add('open');
 };
 window.closePopup=function(type){
   $(`popup-${type}`)?.classList.remove('open');
